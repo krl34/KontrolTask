@@ -1,0 +1,72 @@
+import pygame
+import sys
+import time
+
+pygame.init()
+WIDTH, HEIGHT = 800, 800  # Увеличиваем размер окна
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Заливка кривой Гильберта")
+
+
+def hilbert(order, x, y, xi, xj, yi, yj, progress, max_progress, pixel_surface):
+    if order <= 0:
+        # Вычисляем цвет на основе прогресса
+        t = progress / max_progress
+        r = int(255 * t)
+        g = int(255 * (1 - t))
+        b = int(128 + 127 * (2 * t - 1))
+
+        # Увеличиваем размер квадрата для большего покрытия
+        size = 14  # Больше пикселей
+        center_x = int(x)
+        center_y = int(y)
+
+        # Рисуем больше пикселей
+        for i in range(size):
+            for j in range(size):
+                px = center_x + i - size // 2
+                py = center_y + j - size // 2
+                if 0 <= px < WIDTH and 0 <= py < HEIGHT:
+                    pixel_surface.set_at((px, py), (r, g, b))
+
+        screen.blit(pixel_surface, (0, 0))
+        pygame.display.flip()
+        return progress + 1
+
+    progress = hilbert(order - 1, x, y, yi / 2, yj / 2, xi / 2, xj / 2, progress, max_progress, pixel_surface)
+    progress = hilbert(order - 1, x + xi / 2, y + xj / 2, xi / 2, xj / 2, yi / 2, yj / 2, progress, max_progress,
+                       pixel_surface)
+    progress = hilbert(order - 1, x + xi / 2 + yi / 2, y + xj / 2 + yj / 2, xi / 2, xj / 2, yi / 2, yj / 2, progress,
+                       max_progress, pixel_surface)
+    progress = hilbert(order - 1, x + xi / 2 + yi, y + xj / 2 + yj, -yi / 2, -yj / 2, -xi / 2, -xj / 2, progress,
+                       max_progress, pixel_surface)
+
+    return progress
+
+
+current_order = 7  # Увеличиваем порядок для большего количества точек
+max_progress = 4 ** current_order # 4^7 = 4096
+
+running = True
+clock = pygame.time.Clock()
+
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    # Создаем новую поверхность для каждой итерации
+    pixel_surface = pygame.Surface((WIDTH, HEIGHT))
+    screen.fill((0, 0, 0))
+    pixel_surface.fill((0, 0, 0))
+
+    # Запускаем анимацию
+    hilbert(current_order, 0, 0, WIDTH, 0, 0, HEIGHT, 0, max_progress, pixel_surface)
+
+    # Короткая пауза
+    pygame.time.delay(500)
+
+    clock.tick(60)
+
+pygame.quit()
+sys.exit()
