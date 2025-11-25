@@ -1,0 +1,106 @@
+import pygame
+import sys
+import time
+
+pygame.init()
+WIDTH, HEIGHT = 850, 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Кривая Гильберта")
+
+
+def hilbert(order, x, y, xi, xj, yi, yj, progress, max_progress, color_mode, delay):
+    if order <= 0:
+        t = progress / max_progress
+        if color_mode == 0:
+            r, g, b = int(255 * t), int(255 * (1 - t)), 200
+        else:
+            r, g, b = 200, int(255 * t), int(255 * (1 - t))
+
+        size = 10
+        center_x, center_y = int(x), int(y)
+
+        for i in range(size):
+            for j in range(size):
+                px = center_x + i - size // 2
+                py = center_y + j - size // 2
+                if 0 <= px < 600 and 0 <= py < 600:
+                    screen.set_at((px, py), (r, g, b))
+
+        # Перерисовываем только игровую область с интерфейсом
+        pygame.display.update(pygame.Rect(0, 0, 600, 600))
+
+        if delay > 0:
+            time.sleep(delay / 1000.0)
+
+        return progress + 1
+
+    progress = hilbert(order - 1, x, y, yi / 2, yj / 2, xi / 2, xj / 2, progress, max_progress, color_mode, delay)
+    progress = hilbert(order - 1, x + xi / 2, y + xj / 2, xi / 2, xj / 2, yi / 2, yj / 2, progress, max_progress,
+                       color_mode, delay)
+    progress = hilbert(order - 1, x + xi / 2 + yi / 2, y + xj / 2 + yj / 2, xi / 2, xj / 2, yi / 2, yj / 2, progress,
+                       max_progress, color_mode, delay)
+    progress = hilbert(order - 1, x + xi / 2 + yi, y + xj / 2 + yj, -yi / 2, -yj / 2, -xi / 2, -xj / 2, progress,
+                       max_progress, color_mode, delay)
+    return progress
+
+
+current_order = 4
+max_progress = 4 ** current_order
+color_mode = 0
+animation_delay = 10
+running = True
+paused = False  # Добавлена переменная для паузы
+
+
+def draw_interface():
+    # Рамка для игрового пространства
+    pygame.draw.rect(screen, (100, 100, 100), (0, 0, 600, 600), 2)
+
+    # Информационная панель
+    pygame.draw.rect(screen, (70, 40, 60), (600, 0, 250, 800))
+
+    font = pygame.font.Font(None, 24)
+    info = [
+        f"Порядок: {current_order} (Q/W)",
+        f"Цвет: {['Красно-зеленый', 'Сине-зеленый'][color_mode]} (C)",
+        f"Скорость: {animation_delay}ms (Slow/Fast)",
+        f"Пауза: {'ВКЛ' if paused else 'ВЫКЛ'} (P)"  # Добавлена информация о паузе
+    ]
+    for i, line in enumerate(info):
+        text = font.render(line, True, (255, 255, 255))
+        screen.blit(text, (610, 30 + i * 30))
+
+
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_q and current_order > 1:
+                current_order -= 1
+                max_progress = 4 ** current_order
+            elif event.key == pygame.K_w and current_order < 6:
+                current_order += 1
+                max_progress = 4 ** current_order
+            elif event.key == pygame.K_c:
+                color_mode = 1 - color_mode
+            elif event.key == pygame.K_s and animation_delay < 50:
+                animation_delay += 5
+            elif event.key == pygame.K_f and animation_delay > 0:
+                animation_delay -= 5
+            elif event.key == pygame.K_p:  # Добавлена кнопка паузы
+                paused = not paused
+
+    # Очищаем и рисуем интерфейс
+    screen.fill((0, 0, 0))
+    draw_interface()
+    pygame.display.flip()
+
+    # Запускаем анимацию только если не на паузе
+    if not paused:
+        hilbert(current_order, 0, 0, 600, 0, 0, 600, 0, max_progress, color_mode, animation_delay)
+        # Пауза между анимациями
+        pygame.time.delay(1000)
+
+pygame.quit()
+sys.exit()
